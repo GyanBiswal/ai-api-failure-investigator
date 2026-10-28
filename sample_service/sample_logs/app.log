@@ -1,0 +1,30 @@
+2026-10-01 10:12:01 INFO  POST /users status=201
+2026-10-01 10:15:40 ERROR GET /users/99 status=500
+Traceback (most recent call last):
+  File "sample_service/routes/users.py", line 7, in handle_get_user
+    return user_controller.get_user(user_id)
+  File "sample_service/controllers/user_controller.py", line 12, in get_user
+    return user["name"]
+TypeError: 'NoneType' object is not subscriptable
+2026-10-01 10:18:22 INFO  GET /users/1 status=200
+2026-10-01 10:21:05 ERROR POST /users status=500
+Traceback (most recent call last):
+  File "sample_service/routes/users.py", line 12, in handle_create_user
+    return user_controller.create_user(payload)
+  File "sample_service/controllers/user_controller.py", line 17, in create_user
+    name = payload["name"]
+KeyError: 'name'
+2026-10-01 10:25:48 ERROR POST /orders status=500
+Traceback (most recent call last):
+  File "sample_service/routes/orders.py", line 7, in handle_create_order
+    return order_controller.create_order(payload)
+  File "sample_service/controllers/order_controller.py", line 8, in create_order
+    total = payload["quantity"] * 10
+TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'
+2026-10-01 10:30:12 ERROR GET /orders/5 status=500
+Traceback (most recent call last):
+  File "sample_service/routes/orders.py", line 12, in handle_get_order
+    return order_controller.get_order(order_id)
+  File "sample_service/controllers/order_controller.py", line 21, in get_order
+    return ORDERS[order_id]
+KeyError: 5

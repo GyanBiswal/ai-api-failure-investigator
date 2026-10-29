@@ -64,3 +64,30 @@ def search_error_logs(keyword: str, logs_dir: Path = LOGS_DIR, max_results: int 
                 if len(results) >= max_results:
                     return results
     return results
+
+def read_log_lines(file_name: str, start_line: int = 1, end_line: int = 40,
+                   logs_dir: Path = LOGS_DIR) -> dict:
+    """Read a line range from one stored log file, with real line numbers.
+
+    Only a bare file name ending in .log inside the logs folder is accepted,
+    so paths like ../secret.txt are rejected.
+    """
+    if not file_name or Path(file_name).name != file_name or not file_name.endswith(".log"):
+        raise ValueError("Provide only a log file name such as app.log")
+    path = logs_dir / file_name
+    if not path.is_file():
+        raise ValueError(f"Log file not found: {file_name}")
+    all_lines = path.read_text(encoding="utf-8").splitlines()
+    total = len(all_lines)
+    start = max(1, start_line)
+    end = min(end_line, total, start + 59)
+    if start > end:
+        raise ValueError(f"Invalid line range (file has {total} lines)")
+    lines = [{"line": n, "text": all_lines[n - 1]} for n in range(start, end + 1)]
+    return {
+        "file": file_name,
+        "start_line": start,
+        "end_line": end,
+        "total_lines": total,
+        "numbered": "\n".join(f"{item['line']}: {item['text']}" for item in lines),
+    }

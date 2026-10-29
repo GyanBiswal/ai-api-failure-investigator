@@ -34,12 +34,21 @@ CASES = {
         "method": "POST", "endpoint": "/users", "status_code": 500,
         "request_body": '{"email": "x@example.com"}',
     },
+    "4": {  # truncated log: an error line but no traceback
+        "method": "POST", "endpoint": "/orders", "status_code": 500,
+        "log_text": "2026-10-01 10:25:48 ERROR POST /orders status=500 (traceback missing)",
+    },
+    "5": {  # a failure the sample code cannot explain
+        "method": "GET", "endpoint": "/health", "status_code": 503,
+        "log_text": "upstream connect error or disconnect/reset before headers",
+    },
 }
 
 if __name__ == "__main__":
     key = sys.argv[1] if len(sys.argv) > 1 else "1"
     if key not in CASES:
         raise SystemExit(f"Choose one of: {', '.join(CASES)}")
-    result = investigate(CASES[key])
+    version = sys.argv[2] if len(sys.argv) > 2 else "v2"
+    result = investigate(CASES[key], prompt_version=version)
     del result["tool_log"]  # long; tools_used already shows which tools ran
     print(json.dumps(result, indent=2))

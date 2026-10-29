@@ -1,7 +1,7 @@
 import pytest
 
 from tools.code_inspector import CodeInspectorError, read_code, search_code
-from tools.log_analyzer import analyze_log, search_error_logs
+from tools.log_analyzer import analyze_log, read_log_lines, search_error_logs
 from tools.request_validator import validate_request
 
 USER_TRACEBACK = """2026-10-01 10:15:40 ERROR GET /users/99 status=500
@@ -78,6 +78,18 @@ def test_read_code_missing_file():
 def test_read_code_blocks_unsafe_paths(bad_path):
     with pytest.raises(CodeInspectorError):
         read_code(bad_path)
+
+def test_read_log_lines_returns_traceback_after_a_hit():
+    result = read_log_lines("app.log", 17, 23)
+    assert result["start_line"] == 17 and result["end_line"] == 23
+    assert "POST /orders" in result["numbered"].splitlines()[0]
+    assert "TypeError" in result["numbered"]
+
+
+@pytest.mark.parametrize("bad_name", ["../requirements.txt", "sample_service/app.log", "/etc/passwd", "app.txt", ""])
+def test_read_log_lines_rejects_bad_names(bad_name):
+    with pytest.raises(ValueError):
+        read_log_lines(bad_name)
 
 
 # ---------- request validator ----------

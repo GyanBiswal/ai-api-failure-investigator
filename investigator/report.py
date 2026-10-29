@@ -20,6 +20,7 @@ class Diagnosis(BaseModel):
     recommended_fix: str = Field(description="A suggested fix. It has NOT been applied or tested.")
     verification_test: str = Field(description="A test that would confirm the fix works")
     missing_information: List[str] = Field(description="What is unknown or would raise confidence. Empty list if nothing.")
+    assumptions: List[str] = Field(description="Things you infer that the evidence does not directly show. Empty list if none.")
 
 
 def diagnosis_to_dict(diagnosis: Diagnosis) -> dict:
@@ -40,4 +41,6 @@ def fallback_report(reason: str) -> dict:
         "recommended_fix": "",
         "verification_test": "",
         "missing_information": [reason],
+        "assumptions": [],
+        "confidence_notes": [],
     }

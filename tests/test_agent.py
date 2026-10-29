@@ -60,7 +60,7 @@ def test_diagnosis_placeholders_become_none():
         root_cause="x", confidence="low",
         evidence=[Evidence(source="log", detail="no location"),
                   Evidence(source="code", file="a.py", line=3, detail="has location")],
-        recommended_fix="f", verification_test="t", missing_information=[])
+        recommended_fix="f", verification_test="t", missing_information=[], assumptions=[])
     data = diagnosis_to_dict(diagnosis)
     assert data["evidence"][0]["file"] is None and data["evidence"][0]["line"] is None
     assert data["evidence"][1]["file"] == "a.py" and data["evidence"][1]["line"] == 3

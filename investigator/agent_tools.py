@@ -4,7 +4,7 @@ import json
 from langchain_core.tools import tool
 
 from tools.code_inspector import CodeInspectorError, read_code, search_code
-from tools.log_analyzer import analyze_log, search_error_logs
+from tools.log_analyzer import analyze_log, read_log_lines, search_error_logs
 from tools.request_validator import validate_request
 
 
@@ -21,6 +21,14 @@ def search_logs(keyword: str) -> str:
     with the log file name and line number."""
     return json.dumps(search_error_logs(keyword))
 
+@tool
+def read_log_file(file_name: str, start_line: int = 1, end_line: int = 40) -> str:
+    """Read lines from one stored log file (for example app.log) with real line numbers.
+    Use it after search_logs finds a match, to read the traceback that follows the matching line."""
+    try:
+        return json.dumps(read_log_lines(file_name, start_line, end_line))
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
 
 @tool
 def search_source_code(keyword: str) -> str:
@@ -56,5 +64,5 @@ def validate_request_payload(method: str, endpoint: str, payload_json: str) -> s
     return json.dumps(validate_request(method, endpoint, payload))
 
 
-TOOLS = [analyze_log_text, search_logs, search_source_code, read_source_code, validate_request_payload]
+TOOLS = [analyze_log_text, search_logs, read_log_file, search_source_code, read_source_code, validate_request_payload]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}

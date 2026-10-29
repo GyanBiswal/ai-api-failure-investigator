@@ -1,0 +1,255 @@
+[
+  {
+    "id": "get-user-unknown-id",
+    "category": "full_log",
+    "failure": {
+      "method": "GET", "endpoint": "/users/42", "status_code": 500,
+      "log_lines": [
+        "2026-10-02 09:14:03 ERROR GET /users/42 status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/users.py\", line 7, in handle_get_user",
+        "    return user_controller.get_user(user_id)",
+        "  File \"sample_service/controllers/user_controller.py\", line 12, in get_user",
+        "    return user[\"name\"]",
+        "TypeError: 'NoneType' object is not subscriptable"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 12, "keywords": [["@absent", "@nullish"]]}
+  },
+  {
+    "id": "post-users-missing-name",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/users", "status_code": 500,
+      "request_body": {"email": "asha@example.com"},
+      "log_lines": [
+        "2026-10-02 09:20:11 ERROR POST /users status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/users.py\", line 12, in handle_create_user",
+        "    return user_controller.create_user(payload)",
+        "  File \"sample_service/controllers/user_controller.py\", line 17, in create_user",
+        "    name = payload[\"name\"]",
+        "KeyError: 'name'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 17, "keywords": [["name"], ["@absent"]]}
+  },
+  {
+    "id": "post-users-missing-email",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/users", "status_code": 500,
+      "request_body": {"name": "Meera"},
+      "log_lines": [
+        "2026-10-02 09:25:40 ERROR POST /users status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/users.py\", line 12, in handle_create_user",
+        "    return user_controller.create_user(payload)",
+        "  File \"sample_service/controllers/user_controller.py\", line 18, in create_user",
+        "    email = payload[\"email\"]",
+        "KeyError: 'email'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 18, "keywords": [["email"], ["@absent"]]}
+  },
+  {
+    "id": "post-orders-null-quantity",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"user_id": 1, "item": "pen", "quantity": null},
+      "log_lines": [
+        "2026-10-02 09:31:05 ERROR POST /orders status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/orders.py\", line 7, in handle_create_order",
+        "    return order_controller.create_order(payload)",
+        "  File \"sample_service/controllers/order_controller.py\", line 8, in create_order",
+        "    total = payload[\"quantity\"] * 10",
+        "TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["@nullish"]]}
+  },
+  {
+    "id": "get-order-unknown-id",
+    "category": "full_log",
+    "failure": {
+      "method": "GET", "endpoint": "/orders/7", "status_code": 500,
+      "log_lines": [
+        "2026-10-02 09:40:18 ERROR GET /orders/7 status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/orders.py\", line 12, in handle_get_order",
+        "    return order_controller.get_order(order_id)",
+        "  File \"sample_service/controllers/order_controller.py\", line 21, in get_order",
+        "    return ORDERS[order_id]",
+        "KeyError: 7"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 21, "keywords": [["order"], ["@absent"]]}
+  },
+  {
+    "id": "post-orders-missing-item",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"user_id": 1, "quantity": 2},
+      "log_lines": [
+        "2026-10-02 09:46:50 ERROR POST /orders status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/orders.py\", line 7, in handle_create_order",
+        "    return order_controller.create_order(payload)",
+        "  File \"sample_service/controllers/order_controller.py\", line 13, in create_order",
+        "    \"item\": payload[\"item\"],",
+        "KeyError: 'item'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 13, "keywords": [["item"], ["@absent"]]}
+  },
+  {
+    "id": "post-orders-missing-user-id",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"item": "pen", "quantity": 2},
+      "log_lines": [
+        "2026-10-02 09:52:30 ERROR POST /orders status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/orders.py\", line 7, in handle_create_order",
+        "    return order_controller.create_order(payload)",
+        "  File \"sample_service/controllers/order_controller.py\", line 12, in create_order",
+        "    \"user_id\": payload[\"user_id\"],",
+        "KeyError: 'user_id'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 12, "keywords": [["user_id", "user id"], ["@absent"]]}
+  },
+  {
+    "id": "post-users-body-is-a-list",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/users", "status_code": 500,
+      "request_body": ["Asha", "asha@example.com"],
+      "log_lines": [
+        "2026-10-02 10:02:09 ERROR POST /users status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/users.py\", line 12, in handle_create_user",
+        "    return user_controller.create_user(payload)",
+        "  File \"sample_service/controllers/user_controller.py\", line 17, in create_user",
+        "    name = payload[\"name\"]",
+        "TypeError: list indices must be integers or slices, not str"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 17, "keywords": [["@notobject"]]}
+  },
+  {
+    "id": "post-orders-quantity-is-a-dict",
+    "category": "full_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"user_id": 1, "item": "pen", "quantity": {"amount": 2}},
+      "log_lines": [
+        "2026-10-02 10:10:44 ERROR POST /orders status=500",
+        "Traceback (most recent call last):",
+        "  File \"sample_service/routes/orders.py\", line 7, in handle_create_order",
+        "    return order_controller.create_order(payload)",
+        "  File \"sample_service/controllers/order_controller.py\", line 8, in create_order",
+        "    total = payload[\"quantity\"] * 10",
+        "TypeError: unsupported operand type(s) for *: 'dict' and 'int'"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["@badtype"]]}
+  },
+  {
+    "id": "no-log-post-users-missing-name",
+    "category": "no_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/users", "status_code": 500,
+      "request_body": {"email": "asha@example.com"}
+    },
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 17, "keywords": [["name"], ["@absent"]]}
+  },
+  {
+    "id": "no-log-post-orders-null-quantity",
+    "category": "no_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"user_id": 1, "item": "pen", "quantity": null}
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["@nullish"]]}
+  },
+  {
+    "id": "no-log-post-orders-missing-quantity",
+    "category": "no_log",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "request_body": {"user_id": 1, "item": "pen"}
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["@absent"]]}
+  },
+  {
+    "id": "no-log-get-user-unknown-id",
+    "category": "no_log",
+    "failure": {"method": "GET", "endpoint": "/users/42", "status_code": 500},
+    "expected": {"file": "sample_service/controllers/user_controller.py", "line": 12, "keywords": [["@absent", "@nullish"]]}
+  },
+  {
+    "id": "truncated-log-post-orders",
+    "category": "partial_log",
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 500,
+      "log_lines": ["2026-10-01 10:25:48 ERROR POST /orders status=500 (traceback missing)"]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["@nullish", "@absent"]]}
+  },
+  {
+    "id": "truncated-log-get-order",
+    "category": "partial_log",
+    "failure": {
+      "method": "GET", "endpoint": "/orders/5", "status_code": 500,
+      "log_lines": ["2026-10-01 10:30:12 ERROR GET /orders/5 status=500 (traceback missing)"]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 21, "keywords": [["order"], ["@absent"]]}
+  },
+  {
+    "id": "silent-string-quantity",
+    "category": "silent",
+    "expects_validator": true,
+    "failure": {
+      "method": "POST", "endpoint": "/orders", "status_code": 201,
+      "request_body": {"user_id": 1, "item": "pen", "quantity": "3"},
+      "log_lines": [
+        "2026-10-02 11:02:10 INFO POST /orders status=201 total=3333333333",
+        "2026-10-02 11:03:00 WARN support ticket: expected total 30 for quantity 3, got 3333333333"
+      ]
+    },
+    "expected": {"file": "sample_service/controllers/order_controller.py", "line": 8, "keywords": [["quantity"], ["string"]]}
+  },
+  {
+    "id": "unknown-health-503",
+    "category": "unknown",
+    "failure": {
+      "method": "GET", "endpoint": "/health", "status_code": 503,
+      "log_lines": ["upstream connect error or disconnect/reset before headers"]
+    },
+    "expected": {"unknown": true}
+  },
+  {
+    "id": "unknown-user-timeout-504",
+    "category": "unknown",
+    "failure": {
+      "method": "GET", "endpoint": "/users/1", "status_code": 504,
+      "log_lines": ["2026-10-02 11:40:00 ERROR GET /users/1 status=504 upstream request timeout after 30000ms"]
+    },
+    "expected": {"unknown": true}
+  }
+]

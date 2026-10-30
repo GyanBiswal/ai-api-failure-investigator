@@ -98,8 +98,9 @@ def score_case(case: dict, result: dict) -> dict:
     confidence = report.get("confidence", "low")
     reasons = []
 
-    if result.get("stop_reason") == "error":
-        reasons.append("investigation error: " + _short(result.get("error")))
+    infra_error = bool(result.get("error"))
+    if infra_error:
+        reasons.append("infrastructure error: " + _short(result.get("error")))
 
     located = [e for e in evidence if e.get("file") and e.get("line")]
     existing = sum(1 for e in located if location_exists(e["file"], e["line"]))
@@ -126,6 +127,9 @@ def score_case(case: dict, result: dict) -> dict:
             reasons.append("root cause lacks expected keywords: " + "; ".join(g[0] for g in missing_kw))
 
     overconfident = confidence == "high" and wrong
+    if infra_error:  # an infrastructure failure says nothing about the prompt, so it is not scored as an answer
+        correct, uncertainty, overconfident = None, None, False
+        reasons = [r for r in reasons if r.startswith("infrastructure error")]
     if overconfident:
         reasons.append("overconfident: high confidence but wrong")
 
@@ -136,6 +140,7 @@ def score_case(case: dict, result: dict) -> dict:
         "root_cause_correct": correct,   # True/False, or None for unexplainable cases
         "uncertainty_ok": uncertainty,   # True/False for unexplainable cases, else None
         "tools_ok": tools_pass,
+        "infra_error": infra_error,
         "overconfident": overconfident,
         "evidence_total": len(evidence),
         "evidence_grounded": sum(1 for e in evidence if e.get("verified")),
@@ -154,18 +159,19 @@ def _pct(part, whole):
 
 def summarize(scores: list) -> dict:
     n = len(scores)
+    valid = [s for s in scores if not s["infra_error"]]
     known = [s for s in scores if s["root_cause_correct"] is not None]
     unknown = [s for s in scores if s["uncertainty_ok"] is not None]
     return {
         "cases": n,
         "root_cause_accuracy_pct": _pct(sum(s["root_cause_correct"] for s in known), len(known)),
-        "tool_selection_pct": _pct(sum(s["tools_ok"] for s in scores), n),
+        "tool_selection_pct": _pct(sum(s["tools_ok"] for s in valid), len(valid)),
         "evidence_exists_pct": _pct(sum(s["located_existing"] for s in scores), sum(s["located_total"] for s in scores)),
         "evidence_grounded_pct": _pct(sum(s["evidence_grounded"] for s in scores), sum(s["evidence_total"] for s in scores)),
         "uncertainty_handling_pct": _pct(sum(s["uncertainty_ok"] for s in unknown), len(unknown)),
         "overconfident_wrong": sum(s["overconfident"] for s in scores),
         "step_limit_hits": sum(s["stop_reason"] == "step_limit" for s in scores),
-        "errors": sum(s["stop_reason"] == "error" for s in scores),
+        "errors": sum(s["infra_error"] for s in scores),
         "avg_steps": round(sum(s["steps"] for s in scores) / n, 1) if n else None,
         "avg_tokens": round(sum(s["tokens"] for s in scores) / n) if n else None,
     }

@@ -56,7 +56,7 @@ def run(version, limit=None, token_budget=None, retry_errors=False):
     cases = load_cases()
     results = load_results(version)
     if retry_errors:  # re-run cases that failed with an infrastructure error
-        results = {k: v for k, v in results.items() if v["stop_reason"] != "error"}
+        results = {k: v for k, v in results.items() if not v.get("error")}
         save_results(version, results)
     pending = [c for c in cases if c["id"] not in results]
     if limit:
@@ -90,6 +90,8 @@ def _fmt(value):
 
 
 def _outcome(score):
+    if score["infra_error"]:
+        return "error"
     if score["root_cause_correct"] is not None:
         return "correct" if score["root_cause_correct"] else "wrong"
     return "uncertain-ok" if score["uncertainty_ok"] else "uncertain-miss"

@@ -300,5 +300,548 @@
     "tokens": 4470,
     "stop_reason": "enough_evidence",
     "error": null
+  },
+  "post-users-body-is-a-list": {
+    "diagnosis": {
+      "root_cause": "The POST /users request sent a JSON array instead of the expected object, causing payload[\"name\"] to raise a TypeError.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "The request payload was a JSON list, not an object",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 17,
+          "detail": "user_controller.create_user expects a dict and accesses payload[\"name\"]",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 17,
+          "detail": "TypeError raised because a list was indexed with a string key",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Update the client (or API documentation) to send a JSON object with keys \"name\" and \"email\" (e.g., {\"name\": \"Asha\", \"email\": \"asha@example.com\"}); optionally add request validation in the route to return a 400 error for invalid payloads.",
+      "verification_test": "Send a POST /users with body {\"name\": \"Asha\", \"email\": \"asha@example.com\"} and verify the response is 201 (or appropriate success code) and no server error occurs.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": []
+    },
+    "tools_used": [
+      "analyze_log_text",
+      "validate_request_payload",
+      "read_source_code"
+    ],
+    "steps": 4,
+    "tokens": 6433,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "no-log-post-users-missing-name": {
+    "diagnosis": {
+      "root_cause": "The client request omitted the required \"name\" field, causing a KeyError in create_user at line 17 and resulting in a 500 error.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "Request payload validation failed because the required field \"name\" is missing",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 17,
+          "detail": "create_user function accesses payload[\"name\"] without checking, which will raise a KeyError when \"name\" is absent",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Add input validation in the endpoint (or inside create_user) to ensure the \"name\" field is present and return a 400 Bad Request if it is missing; alternatively, handle the missing key gracefully before accessing it.",
+      "verification_test": "Send a POST /users with a JSON body that includes both \"name\" and \"email\" and verify a successful response (e.g., 201). Then send a request missing \"name\" and verify the API returns a 400 Bad Request instead of 500.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "No log or traceback was submitted for this request, so stored logs may describe a different incident."
+      ]
+    },
+    "tools_used": [
+      "validate_request_payload",
+      "search_source_code",
+      "read_source_code"
+    ],
+    "steps": 4,
+    "tokens": 5097,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "no-log-post-orders-null-quantity": {
+    "diagnosis": {
+      "root_cause": "The POST /orders request contained a null quantity, which caused a TypeError when the controller attempted to multiply None by an integer.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "Request payload has quantity set to null, which fails validation expecting an int",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "create_order multiplies payload[\"quantity\"] by 10 without checking for null",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": "app.log",
+          "line": 23,
+          "detail": "Log shows TypeError: unsupported operand type(s) for *: 'NoneType' and 'int'",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Add input validation for the 'quantity' field in the order creation route (or controller) to ensure it is a non\u2011null integer; if validation fails, return a 400 Bad Request response before calling create_order.",
+      "verification_test": "Send a POST /orders request with payload {\"user_id\":1,\"item\":\"pen\",\"quantity\":null} and verify the API returns a 400 status code and does not raise an exception; also send a valid payload and verify a 200/201 response with correct total.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "No log or traceback was submitted for this request, so stored logs may describe a different incident."
+      ]
+    },
+    "tools_used": [
+      "search_source_code",
+      "read_source_code",
+      "search_logs",
+      "read_source_code",
+      "validate_request_payload"
+    ],
+    "steps": 6,
+    "tokens": 9994,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "no-log-post-orders-missing-quantity": {
+    "diagnosis": {
+      "root_cause": "The POST /orders request omitted the required 'quantity' field, causing the server code to attempt to multiply a None value, resulting in a TypeError and a 500 response.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "log",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "Log shows TypeError when multiplying payload[\"quantity\"] which is None",
+          "verified": false,
+          "verification_note": "sample_service/controllers/order_controller.py:8 does not appear in any tool result"
+        },
+        {
+          "source": "log",
+          "file": "sample_service/routes/orders.py",
+          "line": 7,
+          "detail": "Log trace points to handle_create_order calling order_controller.create_order",
+          "verified": false,
+          "verification_note": "sample_service/routes/orders.py:7 does not appear in any tool result"
+        },
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "Request validation reports missing required field 'quantity'",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Add proper request validation in the orders endpoint to check for required fields like 'quantity' and return a 400 Bad Request if they are missing, or provide a default value before performing arithmetic.",
+      "verification_test": "Send a POST /orders with a valid payload including 'quantity' (e.g., {\"user_id\":1,\"item\":\"pen\",\"quantity\":2}) and verify a 200/201 response; then send the same request without 'quantity' and verify the API returns a 400 Bad Request instead of 500.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "2 evidence item(s) could not be verified against tool results.",
+        "No log or traceback was submitted for this request, so stored logs may describe a different incident."
+      ]
+    },
+    "tools_used": [
+      "search_logs",
+      "read_log_file",
+      "validate_request_payload"
+    ],
+    "steps": 4,
+    "tokens": 6350,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "no-log-get-user-unknown-id": {
+    "diagnosis": {
+      "root_cause": "The get_user function assumes the user exists and directly indexes into a None value when the ID is not present, causing a TypeError and resulting in a 500 error.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "code",
+          "file": "sample_service/routes/users.py",
+          "line": 7,
+          "detail": "handle_get_user calls user_controller.get_user(user_id)",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 11,
+          "detail": "get_user retrieves user = USERS.get(user_id) and then returns user[\"name\"] without checking for None",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 3,
+          "detail": "USERS dictionary only contains IDs 1 and 2, so requesting ID 42 results in user being None",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Update get_user in sample_service/controllers/user_controller.py to check if the user exists and raise a controlled error or return a 404 response, e.g.,\n\n```python\ndef get_user(user_id):\n    user = USERS.get(user_id)\n    if not user:\n        raise KeyError(f\"User {user_id} not found\")  # or return None and let the route handle 404\n    return user[\"name\"]\n```",
+      "verification_test": "Send a GET request to /users/99 (an ID not in USERS) and verify that the response status is 404 (or the chosen error code) instead of 500.",
+      "missing_information": [
+        "Actual log entry showing the exception traceback",
+        "Any request validation layer that might intercept missing users"
+      ],
+      "assumptions": [
+        "The GET request is routed to handle_get_user which calls user_controller.get_user.",
+        "A 500 error indicates an unhandled exception in the code."
+      ],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "No log or traceback was submitted for this request, so stored logs may describe a different incident."
+      ]
+    },
+    "tools_used": [
+      "search_logs",
+      "search_source_code",
+      "read_source_code",
+      "read_source_code"
+    ],
+    "steps": 5,
+    "tokens": 7486,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "truncated-log-post-orders": {
+    "diagnosis": {
+      "root_cause": "create_order attempts to multiply a None (or missing) 'quantity' value by 10, causing a TypeError.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "log",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "TypeError raised when multiplying payload[\"quantity\"] (None) by an int",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": "app.log",
+          "line": 22,
+          "detail": "Log shows the traceback originates from create_order in order_controller.py line 8",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "create_order expects payload[\"quantity\"] to be an int but does not validate it",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Add input validation in create_order to ensure 'quantity' is present and is an integer before performing arithmetic, returning a 400 Bad Request if validation fails.",
+      "verification_test": "Send a POST /orders request with a valid JSON body containing an integer 'quantity' and verify the order is created successfully; then send a request with missing or null 'quantity' and verify the API returns a 400 error instead of a 500.",
+      "missing_information": [
+        "The actual request payload that triggered the error"
+      ],
+      "assumptions": [
+        "The request body did not include a valid integer for the 'quantity' field, resulting in payload[\"quantity\"] being None."
+      ],
+      "confidence_llm": "medium",
+      "confidence_notes": []
+    },
+    "tools_used": [
+      "search_logs",
+      "search_logs",
+      "read_log_file",
+      "read_source_code"
+    ],
+    "steps": 5,
+    "tokens": 7889,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "truncated-log-get-order": {
+    "diagnosis": {
+      "root_cause": "The GET /orders/5 request raised a KeyError because the order with id 5 does not exist and the code accesses the ORDERS dict without validation.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "source": "log",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 21,
+          "detail": "Log shows KeyError when accessing ORDERS[order_id] for order_id 5",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 21,
+          "detail": "order_controller.get_order returns ORDERS[order_id] without existence check",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Update get_order in sample_service/controllers/order_controller.py to check if order_id exists in ORDERS and raise a 404 Not Found (or return an appropriate error response) instead of directly indexing the dict.",
+      "verification_test": "Make a GET request to /orders/5 when no order with id 5 exists and verify that the response status is 404 (or the defined error) instead of 500.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": []
+    },
+    "tools_used": [
+      "search_logs",
+      "search_logs",
+      "read_log_file",
+      "read_source_code"
+    ],
+    "steps": 5,
+    "tokens": 7282,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "silent-string-quantity": {
+    "diagnosis": {
+      "root_cause": "The POST /orders request sent 'quantity' as a string, causing Python to perform string repetition in the total calculation, resulting in an incorrect total value.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "The request payload had quantity as a string instead of int",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "create_order multiplies payload[\"quantity\"] by 10 without type conversion",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": null,
+          "line": null,
+          "detail": "Log shows total=3333333333, which matches \"3\" * 10 string repetition",
+          "verified": false,
+          "verification_note": "no matching tool was run for source 'log'"
+        }
+      ],
+      "recommended_fix": "Validate and coerce the 'quantity' field to an integer before using it, or reject non\u2011int values; e.g., convert payload[\"quantity\"] = int(payload[\"quantity\"]) or add request schema validation that enforces an integer type.",
+      "verification_test": "Send a POST /orders with a valid integer quantity (e.g., {\"user_id\":1,\"item\":\"pen\",\"quantity\":3}) and verify that the response total is 30 and no warning about unexpected total appears.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "1 evidence item(s) could not be verified against tool results."
+      ]
+    },
+    "tools_used": [
+      "search_source_code",
+      "read_source_code",
+      "validate_request_payload"
+    ],
+    "steps": 4,
+    "tokens": 6784,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "unknown-user-timeout-504": {
+    "diagnosis": {
+      "root_cause": "The get_user function does not handle missing users and may raise an exception, causing the application to fail to respond and the upstream proxy to time out.",
+      "confidence": "low",
+      "evidence": [
+        {
+          "source": "code",
+          "file": "sample_service/routes/users.py",
+          "line": 7,
+          "detail": "The route handler handle_get_user simply returns the result of get_user(user_id).",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "code",
+          "file": "sample_service/controllers/user_controller.py",
+          "line": 11,
+          "detail": "get_user retrieves a user from the in\u2011memory USERS dict and returns user[\"name\"] without checking for a missing entry.",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": "app.log",
+          "line": 9,
+          "detail": "A previous successful request to the same endpoint is logged with status 200.",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": null,
+          "line": null,
+          "detail": "The current request logged an upstream request timeout after 30000\u202fms.",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Update get_user to validate that the user exists and return a proper response (e.g., raise a NotFound exception or return a 404 payload) instead of indexing a None value. Also ensure the route handler returns a response object compatible with the web framework.",
+      "verification_test": "Send a GET /users/1 request and confirm it returns quickly with the expected name, then send GET /users/999 and verify the API returns a 404 instead of timing out.",
+      "missing_information": [
+        "Full stack trace or error output from the application process for the failing request.",
+        "Details of the web server / reverse proxy configuration that reports the 504.",
+        "Whether the request parameter type (string vs int) matches the key type in USERS."
+      ],
+      "assumptions": [
+        "The GET request is routed to handle_get_user which calls user_controller.get_user.",
+        "The upstream timeout indicates the application did not return a response within 30 seconds."
+      ],
+      "confidence_llm": "low",
+      "confidence_notes": [
+        "The investigation hit the step limit before finishing."
+      ]
+    },
+    "tools_used": [
+      "search_source_code",
+      "read_source_code",
+      "search_logs",
+      "search_source_code",
+      "read_source_code"
+    ],
+    "steps": 6,
+    "tokens": 9333,
+    "stop_reason": "step_limit",
+    "error": null
+  },
+  "post-orders-quantity-is-a-dict": {
+    "diagnosis": {
+      "root_cause": "The API received a payload where \"quantity\" is a dict, but the controller code expects an integer and directly multiplies it, leading to a TypeError.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "source": "code",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "order_controller.create_order attempts to multiply payload[\"quantity\"] by 10, but payload[\"quantity\"] is a dict",
+          "verified": false,
+          "verification_note": "no matching tool was run for source 'code'"
+        },
+        {
+          "source": "request_validation",
+          "file": null,
+          "line": null,
+          "detail": "Request payload provides \"quantity\" as an object {\"amount\": 2} instead of an integer",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        },
+        {
+          "source": "log",
+          "file": "sample_service/controllers/order_controller.py",
+          "line": 8,
+          "detail": "Traceback shows TypeError: unsupported operand type(s) for *: 'dict' and 'int'",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Update order_controller.create_order to extract the numeric amount from the quantity object (e.g., payload[\"quantity\"][\"amount\"]) before multiplication, or change the API contract to require quantity as an integer and add validation that rejects dicts early.",
+      "verification_test": "Send a POST /orders request with a valid payload where \"quantity\": 2 (int) and verify the response is 200 and total is calculated correctly.",
+      "missing_information": [],
+      "assumptions": [],
+      "confidence_llm": "high",
+      "confidence_notes": [
+        "1 evidence item(s) could not be verified against tool results."
+      ]
+    },
+    "tools_used": [
+      "analyze_log_text",
+      "validate_request_payload"
+    ],
+    "steps": 3,
+    "tokens": 5805,
+    "stop_reason": "enough_evidence",
+    "error": null
+  },
+  "unknown-health-503": {
+    "diagnosis": {
+      "root_cause": "The /health endpoint could not connect to its upstream service, resulting in a connection reset before any response headers were sent, which caused the 503 error.",
+      "confidence": "low",
+      "evidence": [
+        {
+          "source": "log",
+          "file": null,
+          "line": null,
+          "detail": "The request returned HTTP 503 with the error message \"upstream connect error or disconnect/reset before headers\".",
+          "verified": true,
+          "verification_note": "backed by a tool result"
+        }
+      ],
+      "recommended_fix": "Verify that the upstream service the /health endpoint depends on is running and reachable; if it is down, restart it or update the endpoint configuration to point to the correct address. Additionally, add error handling in the /health controller to return a fallback status when the upstream is unavailable.",
+      "verification_test": "After fixing the upstream service or updating the configuration, send a GET request to /health and confirm that the response status code is 200 and no upstream connection errors appear in the logs.",
+      "missing_information": [
+        "Log entries showing which upstream service the /health endpoint attempted to contact.",
+        "Source code for the /health endpoint to see how it proxies or checks downstream services.",
+        "Configuration details for the upstream service (e.g., address, health check settings)."
+      ],
+      "assumptions": [
+        "The 503 response for GET /health is due to an upstream service being unavailable or misconfigured.",
+        "The error message \"upstream connect error or disconnect/reset before headers\" indicates a failure to establish a connection to a downstream service."
+      ],
+      "confidence_llm": "low",
+      "confidence_notes": [
+        "No verified evidence points to a specific file and line or a failed request validation.",
+        "The investigation hit the step limit before finishing."
+      ]
+    },
+    "tools_used": [
+      "search_logs",
+      "search_logs",
+      "search_logs",
+      "search_logs",
+      "search_source_code"
+    ],
+    "steps": 6,
+    "tokens": 5775,
+    "stop_reason": "step_limit",
+    "error": null
   }
 }

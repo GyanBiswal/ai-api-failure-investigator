@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from evaluation.metrics import (
-    REQUIRED_TOOL_GROUPS, SYNONYMS, location_exists, score_case, summarize,
+    REQUIRED_TOOL_GROUPS, SYNONYMS, keywords_ok, location_exists, score_case, summarize,
 )
 from tools.code_inspector import read_code
 from tools.log_analyzer import FRAME_RE
@@ -119,8 +119,21 @@ def test_summarize_rates():
     assert summary["evidence_exists_pct"] == 50.0
     assert summary["overconfident_wrong"] == 0
 
+
 def test_keywords_ignore_hyphen_style_and_accept_common_phrasing():
-    from evaluation.metrics import keywords_ok
     assert keywords_ok("KeyError raised when accessing a non\u2011existent order in ORDERS", [["order"], ["@absent"]])[0]
     assert keywords_ok('KeyError from payload["email"] when the request body does not include an "email" field.',
                        [["email"], ["@absent"]])[0]
+
+
+def test_infrastructure_error_is_not_scored_as_an_answer():
+    result = make_result("Investigation could not be completed.", [], confidence="low", tools=())
+    result["error"] = "Report generation failed: BadRequestError"
+    for case in (CASE, UNKNOWN_CASE):
+        s = score_case(case, result)
+        assert s["infra_error"] is True
+        assert s["root_cause_correct"] is None and s["uncertainty_ok"] is None
+        assert s["overconfident"] is False
+    summary = summarize([score_case(UNKNOWN_CASE, result)])
+    assert summary["errors"] == 1
+    assert summary["uncertainty_handling_pct"] is None

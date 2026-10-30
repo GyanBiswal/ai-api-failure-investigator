@@ -10,7 +10,8 @@ import time
 from pathlib import Path
 
 from evaluation.metrics import score_case, summarize
-from investigator.agent import build_graph, investigate
+from investigator.agent import ainvestigate, build_graph, investigate
+from mcp_server.client import load_agent_tools
 
 HERE = Path(__file__).resolve().parent
 CASES_FILE = HERE / "cases.json"
@@ -52,28 +53,36 @@ def is_rate_limit_error(error):
     return "rate_limit" in text or "rate limit" in text or "429" in text
 
 
-def run(version, limit=None, token_budget=None, retry_errors=False):
+def run(version, limit=None, token_budget=None, retry_errors=False, backend="local"):
+    label = version if backend == "local" else f"{version}_mcp"  # results are kept separate per backend
     cases = load_cases()
-    results = load_results(version)
+    results = load_results(label)
     if retry_errors:  # re-run cases that failed with an infrastructure error
         results = {k: v for k, v in results.items() if not v.get("error")}
-        save_results(version, results)
+        save_results(label, results)
     pending = [c for c in cases if c["id"] not in results]
     if limit:
         pending = pending[:limit]
-    print(f"Prompt {version}: {len(results)} cases already done, {len(pending)} to run")
+    print(f"Prompt {version} ({backend} tools): {len(results)} cases already done, {len(pending)} to run")
 
-    graph = build_graph(version)
+    if backend == "mcp":
+        graph = build_graph(version, tools=asyncio.run(load_agent_tools()))
+    else:
+        graph = build_graph(version)
     spent = 0
     for index, case in enumerate(pending, start=1):
         print(f"[{index}/{len(pending)}] {case['id']}", flush=True)
-        result = investigate(prepare_failure(case["failure"]), graph=graph)
+        failure = prepare_failure(case["failure"])
+        if backend == "mcp":
+            result = asyncio.run(ainvestigate(failure, graph=graph))
+        else:
+            result = investigate(failure, graph=graph)
         if is_rate_limit_error(result["error"]):
             print("Groq rate limit reached. Progress is saved; rerun the same command later.")
             print(str(result["error"])[:300])
             return
         results[case["id"]] = {key: result[key] for key in SAVED_FIELDS}
-        save_results(version, results)
+        save_results(label, results)
         spent += result["tokens"]
         print(f"    tokens={result['tokens']} steps={result['steps']} stop={result['stop_reason']} "
               f"confidence={result['diagnosis']['confidence']}")
@@ -83,7 +92,6 @@ def run(version, limit=None, token_budget=None, retry_errors=False):
         if index < len(pending):
             time.sleep(result["tokens"] / TOKENS_PER_MINUTE * 60)  # stay under the per-minute token limit
     print("Run finished.")
-
 
 def _fmt(value):
     return "n/a" if value is None else str(value)
@@ -151,6 +159,7 @@ def main():
     run_p.add_argument("--limit", type=int)
     run_p.add_argument("--token-budget", type=int)
     run_p.add_argument("--retry-errors", action="store_true")
+    run_p.add_argument("--backend", choices=["local", "mcp"], default="local")
     report_p = sub.add_parser("report")
     report_p.add_argument("version")
     compare_p = sub.add_parser("compare")
@@ -159,7 +168,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "run":
-        run(args.version, args.limit, args.token_budget, args.retry_errors)
+        run(args.version, args.limit, args.token_budget, args.retry_errors, args.backend)
     elif args.command == "report":
         show_report(args.version)
     else:

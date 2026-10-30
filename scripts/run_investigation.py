@@ -1,8 +1,10 @@
 """Run the agent on a sample failure:  python -m scripts.run_investigation 1"""
+import asyncio
 import json
 import sys
 
-from investigator.agent import investigate
+from investigator.agent import ainvestigate, build_graph, investigate
+from mcp_server.client import load_agent_tools
 
 CASES = {
     "1": {  # missing user: a None value is indexed
@@ -49,6 +51,11 @@ if __name__ == "__main__":
     if key not in CASES:
         raise SystemExit(f"Choose one of: {', '.join(CASES)}")
     version = sys.argv[2] if len(sys.argv) > 2 else "v2"
-    result = investigate(CASES[key], prompt_version=version)
+    backend = sys.argv[3] if len(sys.argv) > 3 else "local"
+    if backend == "mcp":
+        graph = build_graph(version, tools=asyncio.run(load_agent_tools()))
+        result = asyncio.run(ainvestigate(CASES[key], graph=graph))
+    else:
+        result = investigate(CASES[key], prompt_version=version)
     del result["tool_log"]  # long; tools_used already shows which tools ran
     print(json.dumps(result, indent=2))

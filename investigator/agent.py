@@ -33,6 +33,36 @@ def tools_node(state: InvestigationState) -> dict:
         log_entries.append({"tool": call["name"], "args": call["args"], "result": result})
     return {"messages": tool_messages, "tool_log": log_entries}
 
+def result_to_text(result) -> str:
+    """Local tools return a string; MCP tools return a list of content blocks. Normalise to text."""
+    if isinstance(result, str):
+        return result
+    if isinstance(result, list):
+        return "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in result)
+    return str(result)
+
+
+def make_async_tools_node(tools):
+    """Same job as tools_node, but awaits each tool. MCP tools can only be called asynchronously."""
+    by_name = {t.name: t for t in tools}
+
+    async def async_tools_node(state: InvestigationState) -> dict:
+        last = state["messages"][-1]
+        tool_messages, log_entries = [], []
+        for call in last.tool_calls:
+            tool = by_name.get(call["name"])
+            if tool is None:
+                result = json.dumps({"error": f"Unknown tool: {call['name']}"})
+            else:
+                try:
+                    result = result_to_text(await tool.ainvoke(call["args"]))
+                except Exception as exc:  # a failing tool or server must not kill the investigation
+                    result = json.dumps({"error": f"{type(exc).__name__}: {exc}"})
+            tool_messages.append(ToolMessage(content=result, tool_call_id=call["id"], name=call["name"]))
+            log_entries.append({"tool": call["name"], "args": call["args"], "result": result})
+        return {"messages": tool_messages, "tool_log": log_entries}
+
+    return async_tools_node
 
 def route_after_agent(state: InvestigationState) -> str:
     """Decide: run tools, or move on to the report."""
@@ -56,10 +86,10 @@ def format_evidence(tool_log: list) -> str:
     return "\n\n".join(parts)
 
 
-def build_graph(prompt_version: str = "v1"):
+def build_graph(prompt_version: str = "v1", tools=None):
     prompts = PROMPTS[prompt_version]
     llm = get_llm()
-    llm_with_tools = llm.bind_tools(TOOLS)
+    llm_with_tools = llm.bind_tools(TOOLS if tools is None else tools)
     structured_llm = llm.with_structured_output(Diagnosis, method="function_calling")
 
     def agent_node(state: InvestigationState) -> dict:
@@ -109,7 +139,7 @@ def build_graph(prompt_version: str = "v1"):
 
     graph = StateGraph(InvestigationState)
     graph.add_node("agent", agent_node)
-    graph.add_node("tools", tools_node)
+    graph.add_node("tools", tools_node if tools is None else make_async_tools_node(tools))
     graph.add_node("report", report_node)
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", route_after_agent, {"tools": "tools", "report": "report"})
@@ -118,10 +148,8 @@ def build_graph(prompt_version: str = "v1"):
     return graph.compile()
 
 
-def investigate(failure: dict, prompt_version: str = "v1", graph=None) -> dict:
-    """Investigate one failure. Pass a prebuilt graph to reuse it across many cases."""
-    graph = graph or build_graph(prompt_version)
-    initial = {
+def _initial_state(failure: dict) -> dict:
+    return {
         "failure": failure,
         "messages": [HumanMessage(content=build_failure_message(failure))],
         "tool_log": [],
@@ -130,16 +158,33 @@ def investigate(failure: dict, prompt_version: str = "v1", graph=None) -> dict:
         "stop_reason": None,
         "diagnosis": None,
     }
-    usage = UsageMetadataCallbackHandler()
-    final = graph.invoke(initial, config={"callbacks": [usage]})
+
+
+def _package(final: dict, usage: UsageMetadataCallbackHandler) -> dict:
     tokens = sum(u.get("total_tokens", 0) for u in usage.usage_metadata.values())
     return {
         "diagnosis": final["diagnosis"],
         "fix_tested": False,  # set by code, never by the LLM: we do not run or apply fixes
-        "tokens": tokens,
         "tools_used": [entry["tool"] for entry in final["tool_log"]],
         "tool_log": final["tool_log"],
         "steps": final["steps"],
+        "tokens": tokens,
         "stop_reason": final["stop_reason"],
         "error": final["error"],
     }
+
+
+def investigate(failure: dict, prompt_version: str = "v1", graph=None) -> dict:
+    """Investigate one failure with local tools. Pass a prebuilt graph to reuse it across many cases."""
+    graph = graph or build_graph(prompt_version)
+    usage = UsageMetadataCallbackHandler()
+    final = graph.invoke(_initial_state(failure), config={"callbacks": [usage]})
+    return _package(final, usage)
+
+
+async def ainvestigate(failure: dict, prompt_version: str = "v1", graph=None) -> dict:
+    """Async version, required when the graph uses MCP tools (they can only be awaited)."""
+    graph = graph or build_graph(prompt_version)
+    usage = UsageMetadataCallbackHandler()
+    final = await graph.ainvoke(_initial_state(failure), config={"callbacks": [usage]})
+    return _package(final, usage)
